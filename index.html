@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1A3A5C">
+<title>수업 참관 기록 — KGMS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=Noto+Serif+KR:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #F4F2ED;
+  --card:     #FFFFFF;
+  --primary:  #1A3A5C;
+  --pri-dark: #102540;
+  --accent:   #E8622A;
+  --acc-light:#FFF0E8;
+  --teal:     #3A8FA4;
+  --teal-lt:  #E8F4F7;
+  --text:     #1C1C1E;
+  --sub:      #48484A;
+  --muted:    #8E8E93;
+  --border:   #E0D9D0;
+  --success:  #2D8653;
+  --err:      #C0392B;
+  --nav-h:    64px;
+  --safe-b:   env(safe-area-inset-bottom, 0px);
+}
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+html { font-size:16px; }
+body {
+  background: var(--bg);
+  font-family: 'Noto Sans KR', sans-serif;
+  color: var(--text);
+  min-height: 100dvh;
+  padding-bottom: calc(var(--nav-h) + var(--safe-b) + 16px);
+  -webkit-font-smoothing: antialiased;
+}
+button { cursor:pointer; font-family:inherit; }
+
+/* 헤더 */
+.top-header {
+  background: var(--primary);
+  padding: 14px 20px 12px;
+  padding-top: calc(14px + env(safe-area-inset-top,0px));
+  position: sticky; top:0; z-index:200;
+}
+.top-header .school { color:#8DB8D4; font-size:11px; letter-spacing:.1em; font-weight:500; }
+.top-header .title  { color:#fff; font-size:19px; font-weight:700; font-family:'Noto Serif KR',serif; margin-top:2px; }
+
+/* 로딩 오버레이 */
+.loading-overlay {
+  display:none; position:fixed; inset:0; z-index:500;
+  background:rgba(26,58,92,.55); backdrop-filter:blur(3px);
+  align-items:center; justify-content:center; flex-direction:column; gap:14px;
+}
+.loading-overlay.show { display:flex; }
+.spinner {
+  width:44px; height:44px; border:4px solid rgba(255,255,255,.25);
+  border-top-color:#fff; border-radius:50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+.loading-overlay .loading-msg { color:#fff; font-size:14px; font-weight:600; }
+
+/* 하단 내비 */
+.bottom-nav {
+  position:fixed; bottom:0; left:0; right:0; z-index:200;
+  height:calc(var(--nav-h) + var(--safe-b));
+  background:var(--card); border-top:1px solid var(--border);
+  display:flex; box-shadow:0 -4px 20px rgba(0,0,0,.08);
+  padding-bottom:var(--safe-b);
+}
+.nav-btn {
+  flex:1; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:4px;
+  border:none; background:transparent; padding:8px 4px;
+  transition:all .15s; position:relative;
+}
+.nav-btn .nav-icon  { font-size:22px; line-height:1; transition:transform .15s; }
+.nav-btn .nav-label { font-size:10px; font-weight:500; color:var(--muted); transition:color .15s; letter-spacing:.02em; }
+.nav-btn.active .nav-label { color:var(--primary); font-weight:700; }
+.nav-btn.active .nav-icon  { transform:translateY(-2px); }
+.nav-btn::after {
+  content:''; position:absolute;
+  bottom:calc(var(--safe-b) + 2px);
+  width:0; height:3px; background:var(--primary);
+  border-radius:2px; transition:width .2s;
+}
+.nav-btn.active::after { width:32px; }
+
+/* 뷰 */
+.view { display:none; animation:fadeUp .22s ease; }
+.view.active { display:block; }
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(12px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+.page { padding:16px 16px 0; max-width:520px; margin:0 auto; }
+
+/* 카드 */
+.card {
+  background:var(--card); border-radius:16px; padding:20px;
+  margin-bottom:12px; box-shadow:0 1px 4px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04);
+}
+.card-title { font-size:18px; font-weight:700; color:var(--primary); font-family:'Noto Serif KR',serif; margin-bottom:4px; }
+.card-sub   { font-size:13px; color:var(--muted); margin-bottom:18px; line-height:1.5; }
+
+/* 폼 */
+.field { margin-bottom:14px; }
+.field-label { display:block; font-size:13px; font-weight:600; color:var(--sub); margin-bottom:7px; }
+select, input[type=text], input[type=password], textarea {
+  width:100%; padding:14px 16px;
+  border:1.5px solid var(--border); border-radius:12px;
+  font-size:16px; font-family:'Noto Sans KR',sans-serif;
+  color:var(--text); background:#fff; outline:none;
+  -webkit-appearance:none; appearance:none;
+  transition:border-color .2s, box-shadow .2s;
+}
+select:focus, input:focus, textarea:focus {
+  border-color:var(--primary); box-shadow:0 0 0 3px rgba(26,58,92,.12);
+}
+select {
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24'%3E%3Cpath fill='%238E8E93' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 14px center; padding-right:40px;
+}
+textarea { resize:vertical; min-height:80px; line-height:1.6; }
+select:disabled { background-color:#F8F8F8; color:var(--muted); }
+
+/* 버튼 */
+.btn {
+  display:flex; align-items:center; justify-content:center; gap:6px;
+  width:100%; padding:16px; border-radius:14px; border:none;
+  font-size:16px; font-weight:700; font-family:'Noto Sans KR',sans-serif;
+  transition:all .15s; min-height:54px; letter-spacing:.01em;
+}
+.btn:active { transform:scale(.97); }
+.btn-primary { background:var(--primary); color:#fff; }
+.btn-primary:active { background:var(--pri-dark); }
+.btn-accent  { background:var(--accent); color:#fff; }
+.btn-accent:active { background:#c8521e; }
+.btn-ghost   { background:transparent; color:var(--primary); border:2px solid var(--primary); }
+.btn-ghost:active { background:rgba(26,58,92,.06); }
+.btn:disabled { opacity:.45; pointer-events:none; }
+.btn-row { display:flex; gap:10px; margin-top:4px; }
+.btn-row .btn-ghost  { flex:1; }
+.btn-row .btn-accent { flex:2; }
+
+/* 단계 */
+.steps {
+  display:flex; align-items:center;
+  background:var(--card); border-radius:14px;
+  padding:14px 20px; margin-bottom:14px;
+  box-shadow:0 1px 4px rgba(0,0,0,.06);
+}
+.step-item { display:flex; align-items:center; gap:8px; }
+.step-dot {
+  width:28px; height:28px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:13px; font-weight:700; flex-shrink:0;
+  background:var(--border); color:var(--muted); transition:all .25s;
+}
+.step-dot.on { background:var(--primary); color:#fff; }
+.step-text { font-size:13px; font-weight:600; color:var(--muted); transition:color .25s; }
+.step-text.on { color:var(--primary); }
+.step-sep  { flex:1; height:2px; background:var(--border); margin:0 10px; transition:background .25s; }
+.step-sep.on { background:var(--primary); }
+
+/* 수업 미리보기 */
+.class-preview {
+  background:var(--teal-lt); border-radius:12px; padding:14px 16px;
+  margin-top:14px; border-left:4px solid var(--teal); animation:fadeUp .2s ease;
+}
+.cp-label   { font-size:11px; font-weight:700; color:var(--teal); letter-spacing:.06em; margin-bottom:6px; }
+.cp-subject { font-size:17px; font-weight:700; color:var(--primary); font-family:'Noto Serif KR',serif; }
+.cp-unit    { font-size:13px; color:var(--sub); margin-top:3px; }
+.cp-goal    { font-size:12px; color:var(--text); margin-top:8px; line-height:1.6; padding-top:8px; border-top:1px solid rgba(58,143,164,.2); }
+
+/* 배너 */
+.class-banner {
+  background:linear-gradient(135deg,var(--primary) 0%,#1e4d74 100%);
+  border-radius:16px; padding:18px 20px; margin-bottom:12px; color:#fff;
+  box-shadow:0 4px 16px rgba(26,58,92,.25);
+}
+.cb-tags { display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; }
+.cb-tag  { background:rgba(255,255,255,.15); color:rgba(255,255,255,.9); font-size:11px; font-weight:600; padding:3px 10px; border-radius:20px; letter-spacing:.04em; }
+.cb-subject { font-size:22px; font-weight:700; font-family:'Noto Serif KR',serif; }
+.cb-unit    { font-size:13px; opacity:.8; margin-top:4px; }
+
+/* 관찰 항목 */
+.sec-header { display:flex; align-items:center; gap:8px; margin-bottom:14px; }
+.sec-badge  { background:var(--accent); color:#fff; font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px; letter-spacing:.04em; white-space:nowrap; }
+.sec-title  { font-size:14px; font-weight:700; color:var(--text); }
+.q-item     { margin-bottom:16px; }
+.q-item:last-child { margin-bottom:0; }
+.q-text     { font-size:14px; color:var(--sub); margin-bottom:8px; line-height:1.55; font-weight:500; }
+
+/* 완료 */
+.done-wrap  { text-align:center; padding:60px 24px 20px; }
+.done-icon  { font-size:72px; margin-bottom:20px; animation:pop .4s cubic-bezier(.175,.885,.32,1.275); }
+@keyframes pop { from { transform:scale(0); opacity:0; } to { transform:scale(1); opacity:1; } }
+.done-title { font-size:22px; font-weight:700; color:var(--primary); font-family:'Noto Serif KR',serif; margin-bottom:10px; }
+.done-sub   { font-size:15px; color:var(--muted); line-height:1.7; }
+
+/* 오류 */
+.err-msg { color:var(--err); font-size:13px; margin-top:6px; display:none; }
+
+/* 제출 카드 */
+.sub-card    { background:var(--card); border-radius:14px; margin-bottom:10px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,.06); }
+.sub-head    { padding:16px 18px; display:flex; align-items:center; justify-content:space-between; min-height:60px; }
+.sub-num     { width:32px; height:32px; border-radius:50%; background:var(--teal); color:#fff; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; margin-right:12px; flex-shrink:0; }
+.sub-meta    { font-size:15px; font-weight:600; }
+.sub-time    { font-size:11px; color:var(--muted); margin-top:2px; }
+.sub-chev    { font-size:20px; color:var(--muted); transition:transform .2s; flex-shrink:0; }
+.sub-chev.open { transform:rotate(180deg); }
+.sub-body    { display:none; padding:0 18px 18px; border-top:1px solid var(--border); }
+.sub-body.open { display:block; animation:fadeUp .18s ease; }
+.fb-sec      { font-size:12px; font-weight:700; color:var(--accent); margin:14px 0 8px; letter-spacing:.04em; }
+.fb-q        { font-size:12px; color:var(--muted); margin-bottom:4px; line-height:1.4; }
+.fb-a        { font-size:14px; color:var(--text); background:var(--bg); border-radius:8px; padding:10px 12px; margin-bottom:10px; line-height:1.6; }
+.fb-gen-title{ font-size:12px; font-weight:700; color:var(--primary); margin:14px 0 6px; }
+
+/* 관리자 테이블 */
+.date-divider { font-size:15px; font-weight:700; color:var(--primary); font-family:'Noto Serif KR',serif; padding:6px 0; border-bottom:2px solid var(--primary); margin:18px 0 10px; }
+.table-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:10px; margin-bottom:4px; }
+.data-table   { width:100%; border-collapse:collapse; font-size:13px; white-space:nowrap; }
+.data-table th{ padding:10px 14px; text-align:left; color:var(--muted); font-weight:600; background:var(--bg); border-bottom:1px solid var(--border); }
+.data-table td{ padding:10px 14px; border-bottom:1px solid var(--border); }
+.code-badge   { font-family:monospace; font-weight:700; color:var(--accent); background:var(--acc-light); padding:3px 9px; border-radius:6px; font-size:14px; letter-spacing:.08em; }
+.cnt-ok  { font-weight:700; color:var(--success); }
+.cnt-no  { color:var(--muted); }
+
+/* 서브탭 */
+.sub-tabs { display:flex; background:var(--border); border-radius:12px; padding:3px; margin-bottom:14px; }
+.sub-tab  { flex:1; padding:10px; border:none; border-radius:10px; font-size:13px; font-weight:500; font-family:'Noto Sans KR',sans-serif; background:transparent; color:var(--muted); transition:all .15s; min-height:40px; }
+.sub-tab.active { background:var(--card); color:var(--primary); font-weight:700; box-shadow:0 1px 4px rgba(0,0,0,.1); }
+
+.login-wrap { max-width:360px; margin:40px auto; padding:0 16px; }
+.notice { background:var(--teal); color:#fff; padding:12px 20px; font-size:13px; line-height:1.5; text-align:center; }
+.general-title { font-size:15px; font-weight:700; color:var(--primary); margin-bottom:10px; }
+.mt8  { margin-top:8px; }
+.mt14 { margin-top:14px; }
+.section-gap { height:4px; }
+</style>
+</head>
+<body>
+
+<!-- ⚙️ Apps Script URL 설정 -->
+<script>
+  // ★ 아래 URL을 Apps Script 배포 후 받은 웹 앱 URL로 교체하세요 ★
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbynO5ssl7CXQ-wNDuFRk7SfDH6Corz_wom1PvaSD7NdGVwePqesPR3nvJCuv7VR80KMFw/exec;
+</script>
+
+<!-- 로딩 오버레이 -->
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-msg" id="loading-msg">저장 중...</div>
+</div>
+
+<!-- 헤더 -->
+<header class="top-header">
+  <div class="school">한국글로벌중학교 · KGMS</div>
+  <div class="title">학부모 수업 참관</div>
+</header>
+
+<!-- ══ 학부모 뷰 ══ -->
+<div id="view-parent" class="view active">
+  <div class="notice">📌 참관하신 수업의 소감을 남겨주세요. 담당 선생님께 전달됩니다.</div>
+  <div class="page" id="p-step1-wrap">
+    <div class="steps mt8" id="step-bar">
+      <div class="step-item">
+        <div class="step-dot on" id="sd1">1</div>
+        <div class="step-text on" id="st1">수업 선택</div>
+      </div>
+      <div class="step-sep" id="sep1"></div>
+      <div class="step-item">
+        <div class="step-dot" id="sd2">2</div>
+        <div class="step-text" id="st2">관찰 기록</div>
+      </div>
+    </div>
+    <div class="card" id="p-step1">
+      <div class="card-title">수업 선택</div>
+      <div class="card-sub">참관하신 수업 정보를 선택해 주세요.</div>
+      <div class="field">
+        <label class="field-label">참관 날짜</label>
+        <select id="p-date" onchange="onDateChange()">
+          <option value="">날짜를 선택하세요</option>
+          <option value="3월16일(월)">3월 16일 (월요일)</option>
+          <option value="3월17일(화)">3월 17일 (화요일)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="field-label">학년 · 반</label>
+        <select id="p-grade" onchange="onGradeChange()" disabled>
+          <option value="">학년·반을 선택하세요</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="field-label">교시</label>
+        <select id="p-period" onchange="onPeriodChange()" disabled>
+          <option value="">교시를 선택하세요</option>
+        </select>
+      </div>
+      <div id="class-preview" class="class-preview" style="display:none">
+        <div class="cp-label">선택한 수업</div>
+        <div class="cp-subject" id="cp-subject"></div>
+        <div class="cp-unit" id="cp-unit"></div>
+        <div class="cp-goal" id="cp-goal"></div>
+      </div>
+      <div class="mt14">
+        <button class="btn btn-primary" id="btn-next" onclick="goStep2()" disabled>다음 단계 &nbsp;→</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="page" id="p-step2-wrap" style="display:none">
+    <div class="class-banner">
+      <div class="cb-tags">
+        <span class="cb-tag" id="b-date"></span>
+        <span class="cb-tag" id="b-grade"></span>
+        <span class="cb-tag" id="b-period"></span>
+      </div>
+      <div class="cb-subject" id="b-subject"></div>
+      <div class="cb-unit" id="b-unit"></div>
+    </div>
+    <div class="card">
+      <div class="sec-header"><span class="sec-badge">Ⅰ</span><span class="sec-title">교수 활동</span></div>
+      <div class="q-item">
+        <div class="q-text">○ 교사는 학생들의 배움을 지원하는가?</div>
+        <textarea id="q1" rows="2" placeholder="관찰하신 내용을 자유롭게 작성해 주세요"></textarea>
+      </div>
+      <div class="q-item">
+        <div class="q-text">○ 교사는 학생들과 상호작용을 활발하게 하는가?</div>
+        <textarea id="q2" rows="2" placeholder="관찰하신 내용을 자유롭게 작성해 주세요"></textarea>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sec-header"><span class="sec-badge">Ⅱ</span><span class="sec-title">학생 활동</span></div>
+      <div class="q-item">
+        <div class="q-text">○ 학생들이 교사와 친구들의 말을 경청하는가?</div>
+        <textarea id="q3" rows="2" placeholder="관찰하신 내용을 자유롭게 작성해 주세요"></textarea>
+      </div>
+      <div class="q-item">
+        <div class="q-text">○ 학생들이 학습 내용을 잘 이해하며 배우고 있는가?</div>
+        <textarea id="q4" rows="2" placeholder="관찰하신 내용을 자유롭게 작성해 주세요"></textarea>
+      </div>
+      <div class="q-item">
+        <div class="q-text">○ 학생들이 짝 활동이나 모둠 활동을 활발하게 하는가?</div>
+        <textarea id="q5" rows="2" placeholder="관찰하신 내용을 자유롭게 작성해 주세요"></textarea>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sec-header"><span class="sec-badge">Ⅲ</span><span class="sec-title">학습 환경</span></div>
+      <div class="q-item">
+        <div class="q-text">○ 교사 간·학생 간 상호활동을 통해 학생들의 배움이 일어나고 있는가?</div>
+        <textarea id="q6" rows="2" placeholder="관찰하신 내용을 자유롭게 작성해 주세요"></textarea>
+      </div>
+      <div class="q-item">
+        <div class="q-text">○ 소외되는 학생 없이 고르게 활동하고 있는가?</div>
+        <textarea id="q7" rows="2" placeholder="관찰하신 내용을 자유롭게 작성해 주세요"></textarea>
+      </div>
+    </div>
+    <div class="card">
+      <div class="general-title">📝 종합 의견</div>
+      <textarea id="qg" rows="4" placeholder="수업 전반에 대한 종합적인 소감을 자유롭게 작성해 주세요" style="min-height:110px"></textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="goStep1()">← 이전</button>
+      <button class="btn btn-accent" id="btn-submit" onclick="submitForm()">✅ 제출하기</button>
+    </div>
+    <div class="section-gap"></div>
+  </div>
+
+  <!-- 완료 -->
+  <div id="done-screen" class="done-wrap" style="display:none">
+    <div class="done-icon">✅</div>
+    <div class="done-title">제출 완료!</div>
+    <div class="done-sub">소중한 의견 감사합니다.<br>담당 선생님께 전달됩니다.</div>
+    <div style="margin-top:32px;padding:0 20px">
+      <button class="btn btn-ghost" onclick="resetParent()">다른 수업 기록하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 교사 뷰 ══ -->
+<div id="view-teacher" class="view">
+  <div class="page">
+    <div class="card mt8">
+      <div class="card-title">교사 피드백 조회</div>
+      <div class="card-sub">담당 수업을 선택하고<br>접근 코드를 입력하세요.</div>
+      <div class="field">
+        <label class="field-label">날짜</label>
+        <select id="t-date" onchange="onTDateChange()">
+          <option value="">날짜를 선택하세요</option>
+          <option value="3월16일(월)">3월 16일 (월요일)</option>
+          <option value="3월17일(화)">3월 17일 (화요일)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="field-label">학년 · 반</label>
+        <select id="t-grade" onchange="onTGradeChange()" disabled>
+          <option value="">학년·반을 선택하세요</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="field-label">교시</label>
+        <select id="t-period" disabled>
+          <option value="">교시를 선택하세요</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="field-label">접근 코드</label>
+        <input type="text" id="t-code" placeholder="예: A21P5"
+          style="text-transform:uppercase;letter-spacing:.12em;font-weight:700"
+          onkeydown="if(event.key==='Enter')loadFeedback()">
+        <div class="err-msg" id="t-err"></div>
+      </div>
+      <button class="btn btn-primary mt8" onclick="loadFeedback()">피드백 조회</button>
+    </div>
+    <div id="teacher-result"></div>
+  </div>
+</div>
+
+<!-- ══ 관리자 뷰 ══ -->
+<div id="view-admin" class="view">
+  <div id="admin-login" class="login-wrap">
+    <div class="card mt8">
+      <div class="card-title">🔐 관리자</div>
+      <div class="card-sub">비밀번호를 입력하세요.</div>
+      <div class="field">
+        <input type="password" id="a-pw" placeholder="비밀번호" onkeydown="if(event.key==='Enter')adminLogin()">
+        <div class="err-msg" id="a-err">비밀번호가 올바르지 않습니다.</div>
+      </div>
+      <button class="btn btn-primary mt8" onclick="adminLogin()">로그인</button>
+      <div style="margin-top:12px;font-size:12px;color:var(--muted);text-align:center">기본 비밀번호: kgms2026</div>
+    </div>
+  </div>
+  <div id="admin-panel" class="page" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:12px 0 10px">
+      <div style="font-size:17px;font-weight:700;color:var(--primary);font-family:'Noto Serif KR',serif">관리자 패널</div>
+      <button onclick="loadAdminData()" style="padding:8px 16px;border-radius:10px;border:1.5px solid var(--border);background:var(--card);font-size:13px;font-weight:600;color:var(--sub)">🔄 새로고침</button>
+    </div>
+    <div class="sub-tabs">
+      <button class="sub-tab active" id="atab-codes" onclick="switchAdminTab('codes')">🔑 접근 코드</button>
+      <button class="sub-tab" id="atab-subs" onclick="switchAdminTab('subs')">📋 제출 현황</button>
+    </div>
+    <div id="admin-codes-wrap"></div>
+    <div id="admin-subs-wrap" style="display:none"></div>
+    <div class="section-gap"></div>
+  </div>
+</div>
+
+<!-- 만든이 -->
+<div style="text-align:center;padding:10px 0 2px;font-size:11px;color:var(--muted);font-family:'Noto Sans KR',sans-serif;letter-spacing:.04em">
+  미래교육부장 &nbsp;이종석
+</div>
+
+<!-- 하단 내비 -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" id="nav-parent" onclick="switchView('parent')">
+    <span class="nav-icon">📋</span>
+    <span class="nav-label">기록 제출</span>
+  </button>
+  <button class="nav-btn" id="nav-teacher" onclick="switchView('teacher')">
+    <span class="nav-icon">👨‍🏫</span>
+    <span class="nav-label">교사 조회</span>
+  </button>
+  <button class="nav-btn" id="nav-admin" onclick="switchView('admin')">
+    <span class="nav-icon">🔐</span>
+    <span class="nav-label">관리자</span>
+  </button>
+</nav>
+
+<script>
+/* ══════════════════════════════════════════════
+   수업 일정 데이터
+══════════════════════════════════════════════ */
+const SCHEDULE = {
+  "3월16일(월)": {
+    "1학년 1반": {
+      "2교시": { subject:"스포츠안전",     unit:"나침반 5분 안전교육",      goal:"나침반 5분 안전교육을 시청할 수 있다." },
+      "3교시": { subject:"체육",           unit:"양궁",                    goal:"양궁의 기초 기능을 익힐 수 있다." },
+      "4교시": { subject:"수학",           unit:"최대공약수와 최소공배수",  goal:"소인수분해를 활용하여 최대공약수와 최소공배수를 구할 수 있다." },
+      "5교시": { subject:"영어",           unit:"Lesson 1. New School New Friends", goal:"여러 나라 친구들의 자기소개 글을 읽고, be동사와 일반동사의 쓰임을 알 수 있다." },
+    },
+    "1학년 2반": {
+      "2교시": { subject:"체육",           unit:"양궁",                    goal:"양궁의 기초 기능을 익힐 수 있다." },
+      "3교시": { subject:"스포츠안전",     unit:"나침반 5분 안전교육",     goal:"나침반 5분 안전교육을 시청할 수 있다." },
+      "4교시": { subject:"과학",           unit:"과학 기술과 우리의 삶",   goal:"과학 발전이 인류에 미친 영향을 설명할 수 있다." },
+      "5교시": { subject:"영어",           unit:"Lesson 1. New School New Friends", goal:"여러나라 친구들의 자기소개 글을 읽고 중심 내용 및 세부내용을 파악할 수 있다." },
+    },
+    "2학년 1반": {
+      "2교시": { subject:"독서토론연극",   unit:"독서토론",                goal:"독서의 가치와 즐거움에 대해 알고 설명할 수 있다." },
+      "3교시": { subject:"수학",           unit:"유리수와 순환소수",       goal:"유리수와 순환소수의 관계를 설명할 수 있다." },
+      "4교시": { subject:"영어",           unit:"Lesson 1. Kick off the New Year", goal:"좋은 대화를 위한 다섯 가지 조언을 읽고, 여러 나라의 제스처를 알아본다." },
+      "5교시": { subject:"체육",           unit:"배구",                    goal:"배구의 기초 기능을 수행할 수 있다." },
+    },
+    "2학년 2반": {
+      "2교시": { subject:"도덕",           unit:"도덕적 상상력을 기르자",  goal:"도덕적 문제 상황에서 공감하고 다양한 대안을 탐색할 수 있다." },
+      "3교시": { subject:"독서토론연극",   unit:"독서토론",                goal:"독서의 가치와 즐거움에 대해 알고 설명할 수 있다." },
+      "4교시": { subject:"독서토론연극",   unit:"독서토론",                goal:"하브루타 질문법에 대해 이해할 수 있다." },
+      "5교시": { subject:"스포츠안전",     unit:"나침반 5분 안전교육",     goal:"나침반 5분 안전교육을 시청할 수 있다." },
+    },
+    "3학년 1반": {
+      "2교시": { subject:"수학",              unit:"무리수와 실수",             goal:"무리수의 개념을 이해한다." },
+      "3교시": { subject:"영어",              unit:"1. The Art of Communication", goal:"의사소통 문제 상황 대처를 위한 본문을 읽으며 중심·세부 내용을 파악할 수 있다." },
+      "4교시": { subject:"자기주도 진로설계", unit:"나 이해하기",               goal:"그림책 활동과 씨앗프리즘카드 활동으로 자아를 탐구하고 자아선언문을 만든다." },
+      "5교시": { subject:"기술·가정",         unit:"변화하는 가족과 건강 가정", goal:"사회 변화에 따른 가족 구조·기능 변화를 이해하고 건강 가정을 위한 역할을 탐색한다." },
+    },
+    "3학년 2반": {
+      "2교시": { subject:"영어",         unit:"1. The Art of Communication",        goal:"의사소통 문제 상황 대처를 위한 본문을 읽으며 중심·세부 내용을 파악할 수 있다." },
+      "3교시": { subject:"음악",         unit:"음악의 이해 / 노래로 표현하는 신나는 음악 여행", goal:"바른 자세와 호흡으로 노래하며 악곡의 특징을 이해하고 개성 있게 노래한다." },
+      "4교시": { subject:"진로와 직업",  unit:"행복한 내 삶과 진로",               goal:"자기 자신 이야기하기, 자기 특기·장점 알아보기를 수행할 수 있다." },
+      "5교시": { subject:"역사",         unit:"선사 문화와 고대 국가의 형성",      goal:"우리나라 청동기 시대의 특징을 파악할 수 있다." },
+    },
+  },
+  "3월17일(화)": {
+    "1학년 1반": {
+      "2교시": { subject:"영어",      unit:"Lesson 1. New School New Friends", goal:"다양한 예문을 통해 be동사와 일반동사의 쓰임을 알 수 있다." },
+      "3교시": { subject:"미술",      unit:"감각을 깨우다",              goal:"다양한 감각을 활용하여 주변 대상을 탐색하고 오감을 활용해 작품을 제작할 수 있다." },
+      "4교시": { subject:"수학",      unit:"최대공약수와 최소공배수",    goal:"소인수분해를 활용하여 최대공약수와 최소공배수를 구할 수 있다." },
+      "5교시": { subject:"기술·가정", unit:"청소년 발달의 특징",         goal:"청소년기의 신체적·지적·정서·사회성 발달 특징을 설명할 수 있다." },
+    },
+    "1학년 2반": {
+      "2교시": { subject:"영어",  unit:"Lesson 1. New School New Friends", goal:"여러나라 친구들의 자기소개 글을 읽고 중심 내용 및 세부내용을 파악할 수 있다." },
+      "3교시": { subject:"사회",  unit:"세계화 시대, 지리의 힘",          goal:"세계 지역의 특징을 파악할 수 있다." },
+      "4교시": { subject:"수학",  unit:"최대공약수",                      goal:"소인수분해를 이용하여 최대공약수를 구할 수 있다." },
+      "5교시": { subject:"도덕",  unit:"도덕적인 나를 꿈꾸며",            goal:"도덕의 의미와 특성을 설명하고, 도덕적인 삶을 위한 노력을 실천할 수 있다." },
+    },
+    "2학년 1반": {
+      "2교시": { subject:"체육",  unit:"배구",                            goal:"모둠별 배구 기능을 수행할 수 있다." },
+      "3교시": { subject:"영어",  unit:"Lesson 1. Kick off the New Year", goal:"to부정사의 형용사적 용법과 최상급에 대해 학습한다." },
+      "4교시": { subject:"정보",  unit:"컴퓨팅 시스템 구성과 동작 원리", goal:"피지컬 컴퓨팅 시스템의 개념과 동작 원리를 설명할 수 있다." },
+      "5교시": { subject:"국어",  unit:"시의 화자",                       goal:"화자의 특성과 효과를 파악하며 작품을 감상할 수 있다." },
+    },
+    "2학년 2반": {
+      "2교시": { subject:"수학",  unit:"유리수와 순환소수",               goal:"유리수와 순환소수의 관계를 설명할 수 있다." },
+      "3교시": { subject:"체육",  unit:"배구",                            goal:"모둠별 배구 기능을 수행할 수 있다." },
+      "4교시": { subject:"영어",  unit:"Lesson 1. Kick off the New Year", goal:"to부정사의 형용사적 용법과 최상급에 대해 학습한다." },
+      "5교시": { subject:"정보",  unit:"컴퓨팅 시스템 구성과 동작 원리", goal:"피지컬 컴퓨팅 시스템의 개념과 동작 원리를 설명할 수 있다." },
+    },
+    "3학년 1반": {
+      "2교시": { subject:"사회",  unit:"근로자의 권리와 노동권 침해 및 구제", goal:"헌법에 보장된 근로자의 권리를 이해할 수 있다." },
+      "3교시": { subject:"국어",  unit:"문학과 소통 — 꽃",                goal:"문학이 심미적 체험을 바탕으로 한 다양한 소통활동임을 안다." },
+      "4교시": { subject:"영어",  unit:"1. The Art of Communication",     goal:"의사소통 문제 상황 대처를 위한 본문을 읽으며 중심·세부 내용을 파악할 수 있다." },
+      "5교시": { subject:"체육",  unit:"추크볼",                          goal:"추크볼의 기본 기능을 수행할 수 있다." },
+    },
+    "3학년 2반": {
+      "2교시": { subject:"과학",  unit:"물질 변화와 화학 반응식",         goal:"간단한 화학 반응을 화학 반응식으로 표현할 수 있다." },
+      "3교시": { subject:"영어",  unit:"1. The Art of Communication",     goal:"의사소통 문제 상황 대처를 위한 본문을 읽으며 중심·세부 내용을 파악할 수 있다." },
+      "4교시": { subject:"국어",  unit:"문학과 소통 — 꽃",               goal:"문학이 심미적 체험을 바탕으로 한 다양한 소통활동임을 안다." },
+      "5교시": { subject:"스포츠안전", unit:"나침반 5분 안전교육",        goal:"나침반 5분 안전교육을 시청할 수 있다." },
+    },
+  }
+};
+
+const ADMIN_PASS = "kgms2026";
+function classKey(d,g,p){ return `sub__${d}__${g}__${p}`; }
+function accessCode(d,g,p){
+  const dc=d.includes("16")?"A":"B", gc=g.replace("학년 ","").replace("반",""), pc=p.replace("교시","");
+  return `${dc}${gc}P${pc}`;
+}
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>"); }
+
+/* ── 로딩 ── */
+function showLoading(msg="처리 중..."){
+  document.getElementById("loading-msg").textContent=msg;
+  document.getElementById("loading").classList.add("show");
+}
+function hideLoading(){ document.getElementById("loading").classList.remove("show"); }
+
+/* ── 뷰 전환 ── */
+function switchView(tab){
+  ["parent","teacher","admin"].forEach(t=>{
+    document.getElementById("view-"+t).classList.toggle("active",t===tab);
+    document.getElementById("nav-"+t).classList.toggle("active",t===tab);
+  });
+  window.scrollTo(0,0);
+}
+
+/* ══ 학부모 폼 ══ */
+function populateSel(sel,opts){
+  sel.innerHTML="<option value=''>선택하세요</option>";
+  opts.forEach(v=>{ const o=document.createElement("option"); o.value=v; o.textContent=v; sel.appendChild(o); });
+  sel.disabled=false;
+}
+function onDateChange(){
+  const d=document.getElementById("p-date").value;
+  const g=document.getElementById("p-grade"), p=document.getElementById("p-period");
+  g.innerHTML="<option value=''>학년·반을 선택하세요</option>"; g.disabled=true;
+  p.innerHTML="<option value=''>교시를 선택하세요</option>"; p.disabled=true;
+  document.getElementById("class-preview").style.display="none";
+  document.getElementById("btn-next").disabled=true;
+  if(d) populateSel(g,Object.keys(SCHEDULE[d]));
+}
+function onGradeChange(){
+  const d=document.getElementById("p-date").value, g=document.getElementById("p-grade").value;
+  const pSel=document.getElementById("p-period");
+  pSel.innerHTML="<option value=''>교시를 선택하세요</option>"; pSel.disabled=true;
+  document.getElementById("class-preview").style.display="none";
+  document.getElementById("btn-next").disabled=true;
+  if(d&&g){
+    Object.entries(SCHEDULE[d][g]).forEach(([p,info])=>{
+      const o=document.createElement("option"); o.value=p; o.textContent=`${p} — ${info.subject}`; pSel.appendChild(o);
+    });
+    pSel.disabled=false;
+  }
+}
+function onPeriodChange(){
+  const d=document.getElementById("p-date").value, g=document.getElementById("p-grade").value, p=document.getElementById("p-period").value;
+  if(d&&g&&p){
+    const info=SCHEDULE[d][g][p];
+    document.getElementById("cp-subject").textContent=info.subject;
+    document.getElementById("cp-unit").textContent=info.unit;
+    document.getElementById("cp-goal").textContent="📌 "+info.goal;
+    document.getElementById("class-preview").style.display="block";
+    document.getElementById("btn-next").disabled=false;
+  } else {
+    document.getElementById("class-preview").style.display="none";
+    document.getElementById("btn-next").disabled=true;
+  }
+}
+function goStep2(){
+  const d=document.getElementById("p-date").value, g=document.getElementById("p-grade").value, p=document.getElementById("p-period").value;
+  const info=SCHEDULE[d][g][p];
+  document.getElementById("b-date").textContent=d;
+  document.getElementById("b-grade").textContent=g;
+  document.getElementById("b-period").textContent=p;
+  document.getElementById("b-subject").textContent=info.subject;
+  document.getElementById("b-unit").textContent=info.unit;
+  document.getElementById("p-step1-wrap").style.display="none";
+  document.getElementById("p-step2-wrap").style.display="block";
+  ["sd2","st2"].forEach(id=>document.getElementById(id).classList.add("on"));
+  document.getElementById("sep1").classList.add("on");
+  window.scrollTo(0,0);
+}
+function goStep1(){
+  document.getElementById("p-step1-wrap").style.display="block";
+  document.getElementById("p-step2-wrap").style.display="none";
+  ["sd2","st2"].forEach(id=>document.getElementById(id).classList.remove("on"));
+  document.getElementById("sep1").classList.remove("on");
+  window.scrollTo(0,0);
+}
+
+async function submitForm(){
+  const d=document.getElementById("p-date").value, g=document.getElementById("p-grade").value, p=document.getElementById("p-period").value;
+  const info=SCHEDULE[d][g][p];
+  const sub={
+    id: Date.now().toString(),
+    classKey:classKey(d,g,p), date:d, grade:g, period:p,
+    subject:info.subject, unit:info.unit,
+    responses:{
+      q1:document.getElementById("q1").value, q2:document.getElementById("q2").value,
+      q3:document.getElementById("q3").value, q4:document.getElementById("q4").value,
+      q5:document.getElementById("q5").value, q6:document.getElementById("q6").value,
+      q7:document.getElementById("q7").value, general:document.getElementById("qg").value,
+    },
+    submittedAt: new Date().toLocaleString("ko-KR"),
+  };
+
+  showLoading("Google Sheets에 저장 중...");
+  try {
+    await fetch(SCRIPT_URL, {
+      method:"POST",
+      headers:{"Content-Type":"text/plain"},
+      body:JSON.stringify(sub),
+      mode:"no-cors",   // Apps Script CORS 우회
+    });
+  } catch(e) { /* no-cors는 항상 opaque — 무시 */ }
+  hideLoading();
+
+  document.getElementById("p-step2-wrap").style.display="none";
+  document.getElementById("done-screen").style.display="block";
+  window.scrollTo(0,0);
+}
+
+function resetParent(){
+  document.getElementById("done-screen").style.display="none";
+  document.getElementById("p-step1-wrap").style.display="block";
+  ["p-date","p-grade","p-period"].forEach(id=>{ document.getElementById(id).value=""; });
+  document.getElementById("p-grade").disabled=true;
+  document.getElementById("p-period").disabled=true;
+  document.getElementById("class-preview").style.display="none";
+  document.getElementById("btn-next").disabled=true;
+  ["q1","q2","q3","q4","q5","q6","q7","qg"].forEach(id=>{ document.getElementById(id).value=""; });
+  ["sd2","st2"].forEach(id=>document.getElementById(id).classList.remove("on"));
+  document.getElementById("sep1").classList.remove("on");
+  window.scrollTo(0,0);
+}
+
+/* ══ 교사 뷰 ══ */
+function onTDateChange(){
+  const d=document.getElementById("t-date").value;
+  const g=document.getElementById("t-grade"), p=document.getElementById("t-period");
+  g.innerHTML="<option value=''>학년·반을 선택하세요</option>"; g.disabled=true;
+  p.innerHTML="<option value=''>교시를 선택하세요</option>"; p.disabled=true;
+  if(d) populateSel(g,Object.keys(SCHEDULE[d]));
+  document.getElementById("teacher-result").innerHTML="";
+}
+function onTGradeChange(){
+  const d=document.getElementById("t-date").value, g=document.getElementById("t-grade").value;
+  const pSel=document.getElementById("t-period");
+  pSel.innerHTML="<option value=''>교시를 선택하세요</option>"; pSel.disabled=true;
+  if(d&&g){
+    Object.entries(SCHEDULE[d][g]).forEach(([p,info])=>{
+      const o=document.createElement("option"); o.value=p; o.textContent=`${p} — ${info.subject}`; pSel.appendChild(o);
+    });
+    pSel.disabled=false;
+  }
+  document.getElementById("teacher-result").innerHTML="";
+}
+
+async function loadFeedback(){
+  const d=document.getElementById("t-date").value, g=document.getElementById("t-grade").value,
+        p=document.getElementById("t-period").value, code=document.getElementById("t-code").value.trim().toUpperCase();
+  const errEl=document.getElementById("t-err");
+  if(!d||!g||!p){ errEl.textContent="수업을 선택해주세요."; errEl.style.display="block"; return; }
+  if(code!==accessCode(d,g,p).toUpperCase()){ errEl.textContent="접근 코드가 올바르지 않습니다. 담당자에게 문의하세요."; errEl.style.display="block"; return; }
+  errEl.style.display="none";
+
+  showLoading("피드백 불러오는 중...");
+  let subs=[];
+  try {
+    const res = await fetch(`${SCRIPT_URL}?action=getByClass&classKey=${encodeURIComponent(classKey(d,g,p))}`);
+    subs = await res.json();
+  } catch(e){
+    document.getElementById("teacher-result").innerHTML=`<div style="text-align:center;padding:30px;color:var(--err)">데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</div>`;
+    hideLoading(); return;
+  }
+  hideLoading();
+
+  const info=SCHEDULE[d][g][p];
+  const qMap=[
+    {key:"q1",sec:"Ⅰ. 교수 활동",text:"교사는 학생들의 배움을 지원하는가?"},
+    {key:"q2",sec:"Ⅰ. 교수 활동",text:"교사는 학생들과 상호작용을 활발하게 하는가?"},
+    {key:"q3",sec:"Ⅱ. 학생 활동",text:"학생들이 교사와 친구들의 말을 경청하는가?"},
+    {key:"q4",sec:"Ⅱ. 학생 활동",text:"학생들이 학습 내용을 잘 이해하며 배우고 있는가?"},
+    {key:"q5",sec:"Ⅱ. 학생 활동",text:"학생들이 짝 활동이나 모둠 활동을 활발하게 하는가?"},
+    {key:"q6",sec:"Ⅲ. 학습 환경",text:"교사 간·학생 간 상호활동을 통해 배움이 일어나고 있는가?"},
+    {key:"q7",sec:"Ⅲ. 학습 환경",text:"소외되는 학생 없이 고르게 활동하고 있는가?"},
+  ];
+
+  let html=`<div class="class-banner" style="margin-top:0">
+    <div class="cb-tags"><span class="cb-tag">${d}</span><span class="cb-tag">${g}</span><span class="cb-tag">${p}</span></div>
+    <div class="cb-subject">${info.subject}</div>
+    <div class="cb-unit">${info.unit} &nbsp;·&nbsp; 총 ${subs.length}건</div>
+  </div>`;
+  if(!subs.length){
+    html+=`<div style="text-align:center;padding:40px;color:var(--muted)">아직 제출된 관찰 기록이 없습니다.</div>`;
+  } else {
+    subs.forEach((s,i)=>{
+      html+=`<div class="sub-card">
+        <div class="sub-head" onclick="toggleCard(this)">
+          <div style="display:flex;align-items:center">
+            <div class="sub-num">${i+1}</div>
+            <div><div class="sub-meta">참관 기록 #${i+1}</div><div class="sub-time">${s.submittedAt}</div></div>
+          </div>
+          <div class="sub-chev">▼</div>
+        </div>
+        <div class="sub-body">`;
+      ["Ⅰ. 교수 활동","Ⅱ. 학생 활동","Ⅲ. 학습 환경"].forEach(sec=>{
+        const qs=qMap.filter(q=>q.sec===sec&&s.responses[q.key]);
+        if(qs.length){ html+=`<div class="fb-sec">${sec}</div>`; qs.forEach(q=>{ html+=`<div class="fb-q">○ ${q.text}</div><div class="fb-a">${esc(s.responses[q.key])}</div>`; }); }
+      });
+      if(s.responses.general) html+=`<div class="fb-gen-title">📝 종합 의견</div><div class="fb-a">${esc(s.responses.general)}</div>`;
+      html+=`</div></div>`;
+    });
+  }
+  document.getElementById("teacher-result").innerHTML=html;
+}
+
+function toggleCard(head){
+  const body=head.nextElementSibling, chev=head.querySelector(".sub-chev");
+  body.classList.toggle("open"); chev.classList.toggle("open");
+}
+
+/* ══ 관리자 ══ */
+function adminLogin(){
+  if(document.getElementById("a-pw").value===ADMIN_PASS){
+    document.getElementById("admin-login").style.display="none";
+    document.getElementById("admin-panel").style.display="block";
+    loadAdminData();
+  } else { document.getElementById("a-err").style.display="block"; }
+}
+
+async function loadAdminData(){
+  showLoading("전체 데이터 불러오는 중...");
+  let allSubs=[];
+  try {
+    const res=await fetch(`${SCRIPT_URL}?action=getAll&pass=${ADMIN_PASS}`);
+    allSubs=await res.json();
+    if(allSubs.error){ throw new Error(allSubs.error); }
+  } catch(e){
+    hideLoading();
+    document.getElementById("admin-codes-wrap").innerHTML=`<div style="color:var(--err);padding:20px;text-align:center">데이터를 불러오지 못했습니다.</div>`;
+    return;
+  }
+  hideLoading();
+
+  /* 접근 코드 탭 */
+  let ch=`<div style="font-size:13px;color:var(--muted);margin-bottom:6px;line-height:1.6">각 선생님께 접근 코드를 개별 전달해 주세요.</div>`;
+  ["3월16일(월)","3월17일(화)"].forEach(d=>{
+    ch+=`<div class="date-divider">${d}</div><div class="table-scroll"><table class="data-table"><thead><tr><th>학년·반</th><th>교시</th><th>교과</th><th>코드</th><th>제출</th></tr></thead><tbody>`;
+    Object.entries(SCHEDULE[d]).forEach(([g,periods])=>{
+      Object.entries(periods).forEach(([p,info])=>{
+        const code=accessCode(d,g,p), cnt=allSubs.filter(s=>s.classKey===classKey(d,g,p)).length;
+        ch+=`<tr><td>${g}</td><td>${p}</td><td>${info.subject}</td><td><span class="code-badge">${code}</span></td><td><span class="${cnt>0?"cnt-ok":"cnt-no"}">${cnt}건</span></td></tr>`;
+      });
+    });
+    ch+=`</tbody></table></div>`;
+  });
+  document.getElementById("admin-codes-wrap").innerHTML=ch;
+
+  /* 제출 현황 탭 */
+  let sh=`<div style="font-size:13px;color:var(--muted);margin-bottom:10px">총 <b style="color:var(--primary)">${allSubs.length}건</b> 제출됨</div>`;
+  if(!allSubs.length){
+    sh+=`<div style="text-align:center;padding:40px;color:var(--muted)">아직 제출된 기록이 없습니다.</div>`;
+  } else {
+    allSubs.sort((a,b)=>Number(b.id)-Number(a.id)).forEach((s,i)=>{
+      sh+=`<div class="sub-card">
+        <div class="sub-head" onclick="toggleCard(this)">
+          <div style="display:flex;align-items:center">
+            <div class="sub-num">${i+1}</div>
+            <div><div class="sub-meta">${s.grade} ${s.period} — ${s.subject}</div><div class="sub-time">${s.date} · ${s.submittedAt}</div></div>
+          </div>
+          <div class="sub-chev">▼</div>
+        </div>
+        <div class="sub-body">`;
+      if(s.responses&&s.responses.general) sh+=`<div class="fb-gen-title">📝 종합 의견</div><div class="fb-a">${esc(s.responses.general)}</div>`;
+      else sh+=`<div style="color:var(--muted);font-size:13px;padding:8px 0">종합 의견 미작성</div>`;
+      sh+=`</div></div>`;
+    });
+  }
+  document.getElementById("admin-subs-wrap").innerHTML=sh;
+}
+
+function switchAdminTab(tab){
+  document.getElementById("admin-codes-wrap").style.display=tab==="codes"?"block":"none";
+  document.getElementById("admin-subs-wrap").style.display=tab==="subs"?"block":"none";
+  document.getElementById("atab-codes").classList.toggle("active",tab==="codes");
+  document.getElementById("atab-subs").classList.toggle("active",tab==="subs");
+}
+</script>
+</body>
+</html>
